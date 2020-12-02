@@ -1,0 +1,1 @@
+print(int.from_bytes((b'\xff\x01\r\xc0\x00\xff'), byteorder='big', signed=False))
