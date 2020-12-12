@@ -76,7 +76,16 @@ def get_path(img,plot = True):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     # tuning erode here
-    semi_gradient_path = cv2.bitwise_and(cv2.ximgproc.thinning(outside_contour),cv2.erode(gradient,np.ones((6, 6), np.uint8) ,5))
+    thinning_im = cv2.ximgproc.thinning(outside_contour,1)
+    # thinning_im = longest_skeletonize(thinning_im)
+    semi_gradient_path = cv2.bitwise_and(thinning_im,cv2.erode(gradient,np.ones((6, 6), np.uint8) ,5))
+    cv2.imshow('gradient_path',semi_gradient_path)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    seperate_contour_list = seperate_contour(semi_gradient_path)
+    semi_gradient_path = np.zeros(semi_gradient_path.shape,np.uint8)
+    for semi_path in seperate_contour_list:
+        semi_gradient_path = cv2.add(semi_gradient_path,longest_skeletonize(semi_path))
     # semi_gradient_path = cv2.bitwise_and(cv2.ximgproc.thinning(outside_contour),gradient)
     test_semi_path = cv2.add(gray,semi_gradient_path)
     cv2.imshow('gradient_path',test_semi_path)
@@ -84,15 +93,19 @@ def get_path(img,plot = True):
     cv2.destroyAllWindows()
     # ถ้ามีปัญหาเปลี่ยนไปใช้หาจุดใกล้จุดเอา
     semi_path_end_points_list = find_endpoints(semi_gradient_path)
+    print('this is',semi_path_end_points_list)
     full_path = semi_gradient_path.copy()
     for centroid_symbol in symbol_centroid_list:
         for end_semi_points in semi_path_end_points_list:
-            if check_in_region(centroid_symbol,end_semi_points,5000):
+            if check_in_region(centroid_symbol,end_semi_points,15000):
                 cv2.line(full_path,centroid_symbol,(end_semi_points[1],end_semi_points[0]),255,1)
     cv2.imshow('gradient_path',full_path)
+    # full_path = longest_skeletonize(full_path)
+    # cv2.imwrite('full_path.png',full_path)
     cv2.waitKey(0)
     full_gradient_path = cv2.bitwise_and(full_path,gradient)
     cv2.imshow('full_gradient',full_gradient_path)
+    # cv2.imwrite('gradi')
     cv2.waitKey(0)
     path_no_height = full_path - full_gradient_path
     seperate_gradient = seperate_contour(gradient)
@@ -138,7 +151,7 @@ def get_path(img,plot = True):
     while(1):
         now_x,now_y = now_point[0],now_point[1]
         checker = [[now_x+1,now_y],[now_x-1,now_y],[now_x,now_y+1],[now_x,now_y-1],
-                    [now_x+1,now_y+1],[now_x+1,now_y-1],[now_x-1,now_y+1],[now_x-1,now_y-1],]
+                    [now_x+1,now_y+1],[now_x+1,now_y-1],[now_x-1,now_y+1],[now_x-1,now_y-1]]
         for check in checker:
             if (check != prev_point) and (check in path_array) and (check not in prev_point_array):
                 prev_point = now_point.copy()
@@ -258,12 +271,10 @@ def get_path(img,plot = True):
                 #     continue
                 # threholding 
                 print('1')
-                if path_point[2] > 16.5:
+                if path_point[2] >= 15.5:
                     path_point[2] = 20
-                elif path_point[2] < 14.5:
+                elif path_point[2] < 15.5:
                     path_point[2] = 10
-                else:
-                    path_point[2] = 15
                 line_path_point.append([path_point[0],path_point[1],path_point[2]])
                 new_X.append(path_point[0])
                 new_Y.append(path_point[1])
@@ -306,5 +317,6 @@ def get_path(img,plot = True):
     np.save('numpy_arr/angle_np.npy', angle_np)
     print(len(line_path_point))
 if __name__ == '__main__':
-    maze = cv2.imread('images/process_data/test.png')
+    # maze = cv2.imread('images/process_data/test.png')
+    maze = cv2.imread('images/test1.png')
     get_path(maze)

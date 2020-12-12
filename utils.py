@@ -6,7 +6,19 @@ import cv2
 import random
 import os
 import threading
+import matplotlib.pyplot as plt
 from playsound import playsound
+
+def euclidian_distance(point1,point2):
+    return ((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2)**(0.5)
+
+def rearrange_path(path,symbol):
+    start_point = (path[0][0],(path[0][1]))
+    end_point = (path[-1][0],(path[-1][1]))
+    if euclidian_distance(symbol,start_point) > euclidian_distance(symbol,end_point):
+        return path[::-1]
+    else:
+        return path
 
 def mm2pulse(mm):
     return int(mm * ((48*64*2)/(math.pi * 6.36619 * 2)))
@@ -240,33 +252,39 @@ def simplify_contour(img):
         # print('fame')
     return blank
 
-def match_symbol(map_img,icon_img):
-    if (len(map_img.shape)) != 2:
-        map_img = cv2.cvtColor(map_img,cv2.COLOR_BGR2GRAY)
+def match_symbol(base_im,sym_im):
+    if (len(base_im.shape)) != 2:
+        base_im = cv2.cvtColor(base_im,cv2.COLOR_BGR2GRAY)
 
-    if (len(icon_img.shape)) != 2:
-        icon_img = cv2.cvtColor(icon_img,cv2.COLOR_BGR2GRAY)
+    if (len(sym_im.shape)) != 2:
+        sym_im = cv2.cvtColor(sym_im,cv2.COLOR_BGR2GRAY)
 
     # Initiate SIFT detector
     sift = cv2.SIFT_create()
     # find the keypoints and descriptors with SIFT
-    kp1, des1 = sift.detectAndCompute(map_img, None)
-    kp2, des2 = sift.detectAndCompute(icon_img, None)
-    # BFMatcher with default params
-    bf = cv2.BFMatcher()
-    matches = bf.match(des1,des2)
-    # Apply ratio test
-    matches = sorted(matches, key = lambda x:x.distance)
-    # get only 10% of matches
-    for_matches_cnt = int(len(matches)*0.1)
-    x_sum = 0
-    y_sum = 0
-    for i in range(for_matches_cnt):
-        x_sum += kp2[matches[i].trainIdx].pt[0]
-        y_sum += kp2[matches[i].trainIdx].pt[1]
-    x_tot = int(x_sum/for_matches_cnt)
-    y_tot = int(y_sum/for_matches_cnt)
-    return x_tot,y_tot
+    kp1, des1 = sift.detectAndCompute(base_im,None)
+    kp2, des2 = sift.detectAndCompute(sym_im,None)
+
+    # FLANN parameters
+    FLANN_INDEX_KDTREE = 1
+    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+    search_params = dict(checks=200)   # or pass empty dictionary
+    flann = cv2.FlannBasedMatcher(index_params,search_params)
+    matches = flann.knnMatch(des1,des2,k=2)
+    good = []
+    for m,n in matches:
+        if m.distance < 0.7*n.distance:
+            good.append(m)
+    x = 0
+    y = 0
+    points = [kp1[m.queryIdx].pt for m in good ]
+    for point in points:
+        x += point[0]
+        y += point[1]
+    x = int(x/len(points))
+    y = int(y/len(points))
+    map_buf = base_im.copy()
+    return x,y
 
 
 def cm2pulse(cm):
@@ -279,5 +297,8 @@ def cal_time(x_now,y_now,x,y):
     tau = (((x_now - x)**2 + (y_now - y)**2) ** (1/2))/6000
     return tau
 
+
 if __name__ == '__main__':
-    play_sound('menu')
+    img = cv2.imread('images/matcher/2.jpg',0)
+    symbol = cv2.imread('images/symbols/hexa.png',0)
+    match_symbol(img,symbol)

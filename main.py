@@ -13,12 +13,13 @@ from func import *
 # ['pink', 'yellow', 'cyan', 'magenta', 'blue', 'gray', 'default', 'black', 'green', 'white', 'red']
 # ['blue', 'pink', 'gray', 'black', 'yellow', 'cyan', 'green', 'magenta', 'white', 'red']
 # ['hide', 'bold', 'italic', 'default', 'fast_blinking', 'faint', 'strikethrough', 'underline', 'blinking', 'reverse']
+using_symbol = False
 class Robot:
     def __init__(self):
         self.x = 0
         self.y = 0
         self.scale = 1.10
-        self.off_x = 0
+        self.off_x = 8
         self.off_y = 8
         self.z = 600
         self.pic_enable = 0
@@ -241,25 +242,11 @@ class Robot:
             self.camera = Camera(port = 1)
         except:
             pass
-        pic = self.camera.take_pic()
-        print('fame')
+        symbol = self.camera.take_pic()
         map_img = cv2.imread('images/process_data/test.png')
-        cv2.namedWindow('Tuning')
-        cv2.createTrackbar('crop_percent_t','Tuning',1000,1000,update)
-        cv2.createTrackbar('crop_percent_b','Tuning',1000,1000,update)
-        cv2.createTrackbar('crop_percent_r','Tuning',1000,1000,update)
-        cv2.createTrackbar('crop_percent_l','Tuning',1000,1000,update)
-        while(1):
-            crop_percent_t = cv2.getTrackbarPos('crop_percent_t','Tuning')/1000
-            crop_percent_b = cv2.getTrackbarPos('crop_percent_b','Tuning')/1000
-            crop_percent_r = cv2.getTrackbarPos('crop_percent_r','Tuning')/1000
-            crop_percent_l = cv2.getTrackbarPos('crop_percent_l','Tuning')/1000
-            abc = crop_img(pic,crop_percent_t,crop_percent_b,crop_percent_r,crop_percent_l)
-            cv2.imshow('Tuning',abc)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-        x,y = match_symbol(map_img,abc)
-        cv2.circle(map_img,(y,x),5,(255,0,255),10)
+        x,y = match_symbol(map_img,symbol)
+        cv2.circle(map_img,(x,y),5,(255,0,255),10)
+        np.save('numpy_arr/symbol_coor.npy',np.array([x,y]))
         cv2.imshow('fucker',map_img)
         cv2.waitKey(0)
         # except:
@@ -353,6 +340,8 @@ def input_cui():
             padang.grip()
         if ans == '10':
             padang.symbol_for_wtf()
+        if ans == '11':
+            using_symbol = not using_symbol
 
 if __name__ == '__main__':
     cui = threading.Thread(target=input_cui, daemon=True)
@@ -369,7 +358,10 @@ if __name__ == '__main__':
         if state == 3:
             play_sound('start')
             padang.get_rod()
-            path = list(np.load('numpy_arr/path_xyz.npy'))[::-1]
+            path = list(np.load('numpy_arr/path_xyz.npy'))
+            if using_symbol:
+                symbol_coor = list(np.load('numpy_arr/symbol_coor.npy'))
+                path = rearrange_path(path,symbol_coor)
             X = []
             Y = []
             Z = []
