@@ -1,14 +1,15 @@
 # AuntieRed
  This part of the code is only high level code (image processing & serial communication) for controlling a cartesian robot at FIBO module 67.
  In order to run this robot pls run main.py to control the robot
+![](images/github_img/robot_pic.png)
 ## Menu
 ![](images/github_img/menu.png)
 ## Generated Path
-![](app/src/main/res/drawable/path.png)
+![](images/github_img/path.png)
 ## Report
 https://mailkmuttacth-my.sharepoint.com/:u:/g/personal/kittitouch_fame_mail_kmutt_ac_th/ETYPcK6GZG1JhfAGEDo3XioB9BOWlVtAqEYbEmy4R6SYWQ?e=ywIbBP
 ## Requirement
-In Order To Run This files you need
+In Order To Run This Files You Need
 ```
  args=0.1.0=pypi_0
  arrow=0.17.0=pypi_0
