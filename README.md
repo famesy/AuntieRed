@@ -1,11 +1,15 @@
 # AuntieRed
- This part of the code is mainly high level (image processing & serial communication) for controlling a cartesian robot at FIBO module 67.
+ This part of the code is only high level code (image processing & serial communication) for controlling a cartesian robot at FIBO module 67.
  In order to run this robot pls run main.py to control the robot
-#
- # This file may be used to create an environment using:
- # This file may be used to create an environment using:
- # $ conda create --name <env> --file <this file>
- # platform: win-64
+## Menu
+![](images/github_img/menu.png)
+## Generated Path
+![](app/src/main/res/drawable/path.png)
+## Report
+https://mailkmuttacth-my.sharepoint.com/:u:/g/personal/kittitouch_fame_mail_kmutt_ac_th/ETYPcK6GZG1JhfAGEDo3XioB9BOWlVtAqEYbEmy4R6SYWQ?e=ywIbBP
+## Requirement
+In Order To Run This files you need
+```
  args=0.1.0=pypi_0
  arrow=0.17.0=pypi_0
  ca-certificates=2020.11.8=h5b45459_0
@@ -54,4 +58,4 @@
  wheel=0.35.1=pyhd3eb1b0_0
  wincertstore=0.2=py38_0
  zlib=1.2.11=h62dcd97_4 
-
+```

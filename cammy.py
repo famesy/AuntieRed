@@ -23,13 +23,13 @@ class Camera:
         while 1:
             ret, frame = self.cam.read()
             frame_2 = frame.copy()
-            x_1,y_1 = 300,300
-            x_2,y_2 = 700,700
+            x_1,y_1 = 520,320
+            x_2,y_2 = 700,500
             cv2.rectangle(frame_2, (x_1,y_1), (x_2,y_2), (255,0,255), 1) 
             cv2.imshow('show',frame_2)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 cv2.destroyAllWindows()
-                return frame[x_1:x_2,y_1:y_2]
+                return frame[y_1:y_2,x_1:x_2]
 
     def perspectrive_with_aruco(self, img):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -260,16 +260,18 @@ class Camera:
 
 
 if __name__ == '__main__':
-    cam = Camera(0)
-    num = 0
-    # for name in glob.glob('images/raw_data/*.jpg'):
-        # im = cv2.imread(name)
-    #     im = cam.perspectrive_with_aruco(im)
-    #     num += 1
-    #     im = cv2.imwrite('images/raw_data_2/{}.jpg'.format(num),im)
-    pic = cam.take_pic()
-    cv2.imshow('test',pic)
-    cv2.waitKey(0)
-    # im = cv2.imread('images/process_data/test2.png')
-    # canny_lower_threshold,canny_upper_threshold,dilate_iteration = cam.image_tuning(im)
-    # cam.get_path(im,canny_lower_threshold,canny_upper_threshold,dilate_iteration)
+    cam = Camera(1)
+    cam.median_multiple_images()
+    # num = 0
+    # # for name in glob.glob('images/raw_data/*.jpg'):
+    #     # im = cv2.imread(name)
+    # #     im = cam.perspectrive_with_aruco(im)
+    # #     num += 1
+    # #     im = cv2.imwrite('images/raw_data_2/{}.jpg'.format(num),im)
+    # pic = cam.take_pic()
+    # cv2.imshow('test',pic)
+    # cv2.imwrite('images/symbols/symbol.png',pic)
+    # cv2.waitKey(0)
+    # # im = cv2.imread('images/process_data/test2.png')
+    # # canny_lower_threshold,canny_upper_threshold,dilate_iteration = cam.image_tuning(im)
+    # # cam.get_path(im,canny_lower_threshold,canny_upper_threshold,dilate_iteration)

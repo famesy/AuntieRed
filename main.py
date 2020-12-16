@@ -3,24 +3,28 @@ import threading
 import time
 import math
 import cv2
+import random
 import sys
 import os
 from utils import *
 from cammy import Camera
 from pyfiglet import Figlet
 from lazyme.string import color_print
-from func import * 
+from path_generator import * 
+using_symbol = False
 # ['pink', 'yellow', 'cyan', 'magenta', 'blue', 'gray', 'default', 'black', 'green', 'white', 'red']
 # ['blue', 'pink', 'gray', 'black', 'yellow', 'cyan', 'green', 'magenta', 'white', 'red']
 # ['hide', 'bold', 'italic', 'default', 'fast_blinking', 'faint', 'strikethrough', 'underline', 'blinking', 'reverse']
-using_symbol = False
 class Robot:
     def __init__(self):
         self.x = 0
         self.y = 0
+        self.ui_flag = 1
+        self.time = 0.1
+        self.ui_value = [self.x,self.y,self.time]
         self.scale = 1.10
-        self.off_x = 8
-        self.off_y = 8
+        self.off_x = 17
+        self.off_y = 4
         self.z = 600
         self.pic_enable = 0
         self.arduino_enable = 0
@@ -87,12 +91,17 @@ class Robot:
             self.ser_pic.flushInput()
             self.ser_pic.flushOutput() 
             self.ser_pic.write(packet)
+            if tau < 300:
+                tau = 300
+            self.ui_value = [self.x,self.y,tau/100]
+            self.ui_flag = 1
         if self.arduino_enable and (self.z != z):
             finish_status_arduino = 0
             if (not self.pic_enable) | (tau == None):
                 tau = 500
             if tau < 300:
                 tau = 300
+
             self.z = z
             z = z * 10
             packet = bytearray(b'\xff\x01')
@@ -156,7 +165,7 @@ class Robot:
         if (self.arduino_enable and self.pic_enable):
             self.ungrip()
             self.go_to(z=600,tau=300)
-            self.go_to(x=1536,y=7373,unit='pulse')
+            self.go_to(x=1536-mm2pulse(0),y=7373+mm2pulse(3),unit='pulse')
             self.go_to(z=210,tau=500)
             time.sleep(0.5)
             self.grip()
@@ -193,8 +202,8 @@ class Robot:
             self.rotate(0)
             self.grip()
             self.go_to(z=600,tau=500)
-            self.go_to(x=1550,y=7373,unit='pulse')
-            self.go_to(z=225,tau=500)
+            self.go_to(x=1550+mm2pulse(1),y=7373+mm2pulse(3),unit='pulse')
+            self.go_to(z=220,tau=500)
             time.sleep(0.5)
             self.ungrip()
             time.sleep(0.5)
@@ -225,35 +234,99 @@ class Robot:
                 self.go_to(x,y,600)
                 time.sleep(1)
                 pic = self.camera.get_pic()
-                # cv2.imshow("test",pic)
-                # print(pic)
-                # cv2.imwrite('images/raw_data_2/{}_{}.png'.format(x, y),pic)
                 try:
                     pic = self.camera.perspectrive_with_aruco(pic)
-                    cv2.imwrite('images/raw_data_2/{}_{}.png'.format(x, y),pic)
+                    cv2.imwrite('images/raw_data/{}_{}.png'.format(x, y),pic)
                 except:
                     print('fail')
                 time.sleep(1)
         self.camera.median_multiple_images()
     def symbol_for_wtf(self):
-        def update(arg):
-            pass
-        try:
-            self.camera = Camera(port = 1)
-        except:
-            pass
-        symbol = self.camera.take_pic()
+        symbol = cv2.imread('images/symbols/symbol.png')
         map_img = cv2.imread('images/process_data/test.png')
         x,y = match_symbol(map_img,symbol)
         cv2.circle(map_img,(x,y),5,(255,0,255),10)
         np.save('numpy_arr/symbol_coor.npy',np.array([x,y]))
         cv2.imshow('fucker',map_img)
         cv2.waitKey(0)
-        # except:
-            # print('fucking noob bobo putang inamo')
+    def take_symbol_pic(self):
+        self.camera = Camera(port = 1)
+        pic = self.camera.take_pic()
+        cv2.imshow('test',pic)
+        cv2.imwrite('images/symbols/symbol.png',pic)
+        cv2.waitKey(0)
 padang = Robot()
 position_stack = []
 state = 0
+def mainui():
+    height_ratio,width_ratio = np.load('numpy_arr/ratio.npy')[0],np.load('numpy_arr/ratio.npy')[1]
+    cv2.namedWindow('MainUI')
+    map_img = cv2.imread('images/process_data/test.png')
+    previous_x = 0
+    previous_y = 0
+    pos_x = 0
+    pos_y = 0
+    while(1):
+        map_buf = map_img.copy()
+        if padang.ui_flag == 1:
+            count_time = padang.ui_value[2]
+            v_x = (padang.ui_value[0] - previous_x)/count_time
+            v_y = (padang.ui_value[1] - previous_y)/count_time
+            start_time = time.time()
+            move_flag = 1
+            padang.ui_flag = 0
+        if move_flag == 1:
+            pos_x = previous_x - v_x*(start_time-time.time())
+            pos_y = previous_y - v_y*(start_time-time.time())
+            if (time.time() - start_time) >= count_time:
+                previous_x,previous_y = padang.ui_value[0],padang.ui_value[1]
+                move_flag = 0
+        color = map_img[int(pos_x/height_ratio),int(pos_y/width_ratio)]
+        color = (int(color[0]),int(color[1]),int(color[2]))
+        cv2.circle(map_buf,(int(pos_y/width_ratio),int(pos_x/height_ratio)),6,(0,0,0),-1)
+        cv2.circle(map_buf,(int(pos_y/width_ratio),int(pos_x/height_ratio)),5,color,-1)
+        cv2.imshow('MainUI',map_buf)
+        cv2.waitKey(20)
+def startstopui():
+    # Importing Modules
+    import pygame as pg
+    import pygame_widgets as pw
+    def start():
+        state = 3
+    def stop():
+        play_sound('reset')
+        padang.reset()
+        state = 0
+    # creating screen
+    pg.init()
+    screen = pg.display.set_mode((800, 600))
+    running = True
+    button_1 = pw.Button(
+            screen, 100, 100, 300, 150, text='Start',
+            fontSize=50, margin=20,
+            inactiveColour=(0, 255, 0),
+            pressedColour=(255, 255, 255), radius=20,
+            onClick=start()
+        )
+    button_2 = pw.Button(
+            screen, 100, 400, 300, 150, text='Stop',
+            fontSize=50, margin=20,
+            inactiveColour=(255, 0, 0),
+            pressedColour=(255, 255, 255), radius=20,
+            onClick=stop()
+        )
+
+    while running:
+        events = pg.event.get()
+        for event in events:
+            if event.type == pg.QUIT:
+                    running = False
+        button_1.listen(events)
+        button_1.draw()
+        button_2.listen(events)
+        button_2.draw()
+        pg.display.update()
+
 def input_cui():
     global state
     play_sound('start')
@@ -271,7 +344,11 @@ def input_cui():
         color_print('5 : Find Path', color='magenta')
         color_print('6 : Path Following', color='red')
         color_print('7 : Set Offset', color='yellow')
-        color_print('8 : Exit', color='green')
+        color_print('8 : Start Stop UI', color='green')
+        color_print('9 : Map UI', color='cyan')
+        color_print('10 : Take Symbol Pic', color='blue')
+        color_print('11 : Match Symbol', color='pink')
+        color_print('12 : Using Symbol For Rearrage Path', color='magenta')
         ans = input("Ans = ")
         if( ans != '3'):
             play_sound('menu')
@@ -335,14 +412,20 @@ def input_cui():
             padang.off_y = int(input("Y :"))
             padang.off_y = float(input("Scale :"))
         if ans == '8':
-            sys.exit()
+            startstop = threading.Thread(target=startstopui, daemon=True)
+            startstop.start()
         if ans == '9':
-            padang.grip()
+            gui = threading.Thread(target=mainui, daemon=True)
+            gui.start()
         if ans == '10':
-            padang.symbol_for_wtf()
+            padang.take_symbol_pic()
         if ans == '11':
+            padang.symbol_for_wtf()
+        if ans == '12':
+            global using_symbol
             using_symbol = not using_symbol
-
+        if ans == '13':
+            padang.grip()
 if __name__ == '__main__':
     cui = threading.Thread(target=input_cui, daemon=True)
     cui.start()
@@ -358,7 +441,8 @@ if __name__ == '__main__':
         if state == 3:
             play_sound('start')
             padang.get_rod()
-            path = list(np.load('numpy_arr/path_xyz.npy'))
+            path = list(np.load('numpy_arr/path_xyz.npy'))[::-1]
+            print(using_symbol)
             if using_symbol:
                 symbol_coor = list(np.load('numpy_arr/symbol_coor.npy'))
                 path = rearrange_path(path,symbol_coor)
@@ -376,11 +460,7 @@ if __name__ == '__main__':
             map_img_original = cv2.imread('images/process_data/test.png')
             padang.go_to(x = (path[0][0]*padang.scale) + padang.off_x ,y = (path[0][1]*padang.scale) + padang.off_y)
             try:
-                map_img = map_img_original.copy()
                 height_ratio,width_ratio = np.load('numpy_arr/ratio.npy')[0],np.load('numpy_arr/ratio.npy')[1]
-                cv2.circle(map_img,(int(y/width_ratio),int(x/height_ratio)),5,(255,0,255),5)
-                cv2.imshow('realtime pos',map_img)
-                cv2.waitKey(1)
             except:
                 print('error')
             padang.go_to(z=(int(path[0][2])*10+120),tau=500)
@@ -391,13 +471,6 @@ if __name__ == '__main__':
                 x = int((xyz[0]*padang.scale)+padang.off_x)
                 y = int((xyz[1]*padang.scale)+padang.off_y)
                 z = int(xyz[2])*10
-                try:
-                    map_img = map_img_original.copy()
-                    cv2.circle(map_img,(int(y/width_ratio),int(x/height_ratio)),5,(255,0,255),5)
-                    cv2.imshow('realtime pos',map_img)
-                    cv2.waitKey(1)
-                except:
-                    pass
                 padang.go_to(x,y,z+120)
                 time.sleep(0.25)
             play_sound('end')
@@ -417,9 +490,6 @@ if __name__ == '__main__':
                 padang.rotate(int(angle))
                 time.sleep(0.25)
             padang.place_rod()
-            # self.reset()
-            # time.sleep(1)
-            # self.set_home()
             play_sound('end')
             state = 0
         if state == 4:

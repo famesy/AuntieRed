@@ -13,9 +13,12 @@ def euclidian_distance(point1,point2):
     return ((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2)**(0.5)
 
 def rearrange_path(path,symbol):
+    print('this is start point ' , path[0])
+    print('this is end point ' , path[-1])
+    print('this is symbol point ' , symbol)
     start_point = (path[0][0],(path[0][1]))
     end_point = (path[-1][0],(path[-1][1]))
-    if euclidian_distance(symbol,start_point) > euclidian_distance(symbol,end_point):
+    if euclidian_distance((symbol[1],symbol[0]),start_point) > euclidian_distance((symbol[1],symbol[0]),end_point):
         return path[::-1]
     else:
         return path
@@ -273,7 +276,7 @@ def match_symbol(base_im,sym_im):
     matches = flann.knnMatch(des1,des2,k=2)
     good = []
     for m,n in matches:
-        if m.distance < 0.7*n.distance:
+        if m.distance < 0.25*n.distance:
             good.append(m)
     x = 0
     y = 0
@@ -299,6 +302,9 @@ def cal_time(x_now,y_now,x,y):
 
 
 if __name__ == '__main__':
-    img = cv2.imread('images/matcher/2.jpg',0)
-    symbol = cv2.imread('images/symbols/hexa.png',0)
-    match_symbol(img,symbol)
+    img = cv2.imread('images/process_data/test.png',0)
+    symbol = cv2.imread('images/symbols/symbol.png',0)
+    y,x = match_symbol(img,symbol)
+    cv2.circle(img,(x,y),5,(255,0,255),10)
+    cv2.imshow('fucker',img)
+    cv2.waitKey(0)
